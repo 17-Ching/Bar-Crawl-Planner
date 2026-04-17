@@ -36,7 +36,7 @@
 }
 
 html {
-  font-size: 16px;
+  font-size: 17px;   /* 全體字級放大一號 */
   scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
 }
@@ -236,13 +236,23 @@ body {
   color: var(--color-text-2) !important;
 }
 
-/* 自訂 Marker 動畫 */
-.custom-marker {
-  transition: transform var(--transition-fast) !important;
+/* 地圖底圖加亮：讓街道名稱更清晰，保留深色風格 */
+.leaflet-tile-pane {
+  filter: brightness(1.6) contrast(1.05) saturate(0.9);
 }
-.custom-marker:hover {
-  transform: scale(1.2) !important;
-  z-index: 1000 !important;
+
+/* 自訂 Marker 內層動畫（對展示層套用，避免 Leaflet 定位層被 transform 干擾） */
+.custom-marker {
+  cursor: pointer;
+  /* 移除展示層的 transform，改對內層操作 */
+}
+.custom-marker .marker-inner {
+  transition: transform 0.15s ease, filter 0.15s ease !important;
+  transform-origin: center bottom !important;
+}
+.custom-marker:hover .marker-inner {
+  transform: scale(1.25) !important;
+  filter: brightness(1.2) drop-shadow(0 0 8px currentColor) !important;
 }
 
 /* 路線動畫（閃爍效果） */

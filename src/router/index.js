@@ -3,6 +3,12 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
+    name: 'Home',
+    component: () => import('@/views/HomeView.vue'),
+    meta: { title: '首頁', icon: '🏠' },
+  },
+  {
+    path: '/map',
     name: 'Map',
     component: () => import('@/views/MapView.vue'),
     meta: { title: '探索地圖', icon: '🗺️' },
@@ -30,6 +36,12 @@ const routes = [
     name: 'PhotoWall',
     component: () => import('@/views/PhotoWallView.vue'),
     meta: { title: '微醺時刻', icon: '📸' },
+  },
+  {
+    path: '/profile/edit',
+    name: 'ProfileEdit',
+    component: () => import('@/views/ProfileEditView.vue'),
+    meta: { title: '編輯個人資料' },
   },
 ]
 

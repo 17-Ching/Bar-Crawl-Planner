@@ -36,8 +36,18 @@
 
     <!-- 足跡時間軸 -->
     <section class="px-4 space-y-3 pb-4">
+      <!-- 未登入提示 -->
+      <div v-if="!authStore.isLoggedIn" class="text-center py-16 px-6">
+        <p class="text-5xl mb-4">🔐</p>
+        <p class="font-display font-bold text-xl text-neon-gradient mb-2">登入以檢視足跡</p>
+        <p class="text-text-muted text-sm mb-6">登入後可以記錄所有打卡足跡、照片與備註</p>
+        <button @click="showLoginModal = true" class="btn btn-primary">
+          🔐 登入 / 註冊
+        </button>
+      </div>
+
       <!-- 載入骨架 -->
-      <template v-if="loading">
+      <template v-else-if="loading">
         <div v-for="i in 4" :key="i" class="skeleton h-28 rounded-2xl" />
       </template>
 
@@ -98,7 +108,12 @@
 
     <!-- 打卡 Modal -->
     <Transition name="modal">
-      <CheckinModal v-if="showCheckinModal" @close="showCheckinModal = false" @saved="loadVisits" />
+      <CheckinModal v-if="showCheckinModal" :initial-bar="initialBar" @close="showCheckinModal = false" @saved="loadVisits" />
+    </Transition>
+
+    <!-- 登入 Modal -->
+    <Transition name="modal">
+      <LoginModal v-if="showLoginModal" @close="showLoginModal = false" />
     </Transition>
   </div>
 </template>
@@ -108,20 +123,23 @@ import { ref, onMounted } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 import CheckinModal from '@/components/footprints/CheckinModal.vue'
+import LoginModal from '@/components/auth/LoginModal.vue'
 
 const authStore = useAuthStore()
 const visits = ref([])
 const loading = ref(false)
 const showCheckinModal = ref(false)
+const showLoginModal   = ref(false)
+const initialBar       = ref(null)  // 從地圖「打卡」跳過來時帶入的酒吧
 
 // 成就徽章定義
 const badges = ref([
-  { key: 'first_checkin', icon: '🌙', label: '初夜',     unlocked: false },
-  { key: 'bar_hopper_5',  icon: '🏃', label: '5連打',    unlocked: false },
-  { key: 'bar_hopper_10', icon: '⚡', label: '10連打',   unlocked: false },
-  { key: 'night_owl',     icon: '🦉', label: '夜貓子',   unlocked: false },
-  { key: 'photo_king',    icon: '📸', label: '攝影師',   unlocked: false },
-  { key: 'legend',        icon: '👑', label: '傳說',      unlocked: false },
+  { key: 'first_checkin', icon: '🌙', label: '初夜',   unlocked: false },
+  { key: 'bar_hopper_5',  icon: '🏃', label: '5連打',  unlocked: false },
+  { key: 'bar_hopper_10', icon: '⚡', label: '10連打', unlocked: false },
+  { key: 'night_owl',     icon: '🦉', label: '夜貓子', unlocked: false },
+  { key: 'photo_king',    icon: '📸', label: '攝影師', unlocked: false },
+  { key: 'legend',        icon: '👑', label: '傳說',   unlocked: false },
 ])
 
 const formatDate = (iso) => {
@@ -153,7 +171,19 @@ async function loadVisits() {
   loading.value = false
 }
 
-onMounted(loadVisits)
+onMounted(() => {
+  // 接收從地圖「打卡」按鈕跳轉過來的酒吧資訊
+  const raw = sessionStorage.getItem('checkin_bar')
+  if (raw) {
+    try {
+      initialBar.value = JSON.parse(raw)
+      sessionStorage.removeItem('checkin_bar')
+      showCheckinModal.value = true
+    } catch { /* ignore */ }
+  }
+  loadVisits()
+})
+
 </script>
 
 <style scoped>

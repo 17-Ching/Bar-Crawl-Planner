@@ -1,6 +1,10 @@
 -- ================================================================
 -- 不醉不歸：酒吧推薦指南 — Supabase 資料庫初始化腳本
 -- 執行順序：在 Supabase SQL Editor 中貼入並執行
+--
+-- 「重要」登入不需 Email 驗證設定：
+--   Supabase Dashboard → Authentication → Providers → Email
+--   關閉「Confirm email」選項→儲存
 -- ================================================================
 
 -- ── 啟用 PostGIS 擴充套件 ──────────────────────────────────────
@@ -13,6 +17,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS public.users (
   id                    UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   username              TEXT NOT NULL DEFAULT '',
+  display_name          TEXT NOT NULL DEFAULT '',         -- 顯示姓名
+  birthday              DATE,                             -- 生日
   avatar_url            TEXT,
   level                 INT4 NOT NULL DEFAULT 1,
   total_bars_visited    INT4 NOT NULL DEFAULT 0,
@@ -24,12 +30,14 @@ CREATE TABLE IF NOT EXISTS public.users (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.users (id, username, avatar_url)
+  INSERT INTO public.users (id, username, display_name, avatar_url)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
     NEW.raw_user_meta_data->>'avatar_url'
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

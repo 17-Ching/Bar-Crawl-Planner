@@ -11,13 +11,16 @@ export const MAP_CONFIG = {
   minZoom: 11,
   maxZoom: 19,
 
-  // CartoDB Dark Matter 免費深色底圖（無需 API Key）
+  // CartoDB Dark Matter (V2) — CSS filter 墜層為街道加亮
   tileLayer: {
     url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd',
     maxZoom: 20,
   },
+
+  // Nominatim 地理編碼（區域搜尋）
+  nominatimUrl: 'https://nominatim.openstreetmap.org/search',
 
   // OSRM 公共路線規劃 API（步行）
   osrmBase: 'https://router.project-osrm.org/route/v1/foot',

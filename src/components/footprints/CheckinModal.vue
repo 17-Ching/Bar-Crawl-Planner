@@ -89,13 +89,16 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import imageCompression from 'browser-image-compression'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import { GAME_CONFIG } from '@/config'
 
+const props = defineProps({
+  initialBar: { type: Object, default: null }
+})
 const emit = defineEmits(['close', 'saved'])
 const authStore = useAuthStore()
 const { success, error: toastError } = useToast()
@@ -111,6 +114,13 @@ const form = reactive({
   drinkCount: 0,
   note: '',
 })
+
+onMounted(() => {
+  if (props.initialBar?.name) {
+    form.barName = props.initialBar.name
+  }
+})
+
 
 async function handlePhoto(e, idx) {
   const file = e.target.files[0]
@@ -135,26 +145,28 @@ async function submit() {
     for (const file of photoFiles.value.filter(Boolean)) {
       const path = `checkin/${authStore.user.id}/${Date.now()}_${file.name}`
       const { error: upErr } = await supabase.storage.from('photos').upload(path, file)
-      if (!upErr) {
-        const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(path)
-        photoUrls.push(publicUrl)
-      }
+      if (upErr) throw new Error(`圖片上傳失敗: ${upErr.message}`)
+      
+      const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(path)
+      photoUrls.push(publicUrl)
     }
 
-    // 2. 先確認或建立酒吧記錄（簡化版）
+    // 2. 先確認或建立酒吧記錄
     let barId = null
-    const { data: existingBar } = await supabase
-      .from('bars').select('id').ilike('name', form.barName).limit(1).single()
+    const { data: existingBar, error: searchErr } = await supabase
+      .from('bars').select('id').ilike('name', form.barName).limit(1).maybeSingle()
+      
     if (existingBar) {
       barId = existingBar.id
     } else {
-      const { data: newBar } = await supabase
+      const { data: newBar, error: insertBarErr } = await supabase
         .from('bars').insert({ name: form.barName, category: 'bar' }).select('id').single()
+      if (insertBarErr) throw new Error(`建立酒吧失敗: ${insertBarErr.message}`)
       barId = newBar?.id
     }
 
     // 3. 新增打卡記錄
-    await supabase.from('visit_history').insert({
+    const { error: visitErr } = await supabase.from('visit_history').insert({
       user_id: authStore.user.id,
       bar_id:  barId,
       note:    form.note,
@@ -163,15 +175,19 @@ async function submit() {
       mood_emoji:  form.moodEmoji,
       location_verified: false,
     })
+    if (visitErr) throw new Error(`打卡紀錄寫入失敗: ${visitErr.message}`)
 
     // 4. 更新用戶統計
-    await supabase.rpc('increment_user_checkin', { uid: authStore.user.id })
+    const { error: rpcErr } = await supabase.rpc('increment_user_checkin', { uid: authStore.user.id })
+    if (rpcErr) throw new Error(`統計更新失敗: ${rpcErr.message}`)
 
     success('打卡成功！🎉 +10 XP')
     emit('saved')
     emit('close')
   } catch (e) {
-    toastError('打卡失敗，請稍後再試')
+    // 【裸字串顯示錯誤】讓使用者與 QA 直接看到 Supabase 回傳的 Policy 英文錯誤
+    alert(`【Supabase 除錯】\n${e.message}`)
+    toastError(e.message)
     console.error(e)
   } finally {
     submitting.value = false
