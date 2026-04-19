@@ -13,6 +13,7 @@
         <img v-if="auth.profile?.avatar_url" :src="auth.profile.avatar_url" class="w-full h-full rounded-full object-cover bg-dark-800" />
         <UserCircle v-else class="w-full h-full text-neon-purple" />
       </div>
+      <button v-else @click="auth.showLoginModal = true" class="btn btn-primary btn-sm">登入 / 註冊</button>
     </header>
 
     <!-- ── (A) 新手教學 (How to play) ── -->
@@ -67,7 +68,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { UserCircle } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
@@ -81,19 +82,19 @@ const newsList = [
     title: '本週末信義區「深夜超商路跑」爭霸戰開跑！',
     desc: '從松壽路到忠孝東路，8 間超商連續踩點挑戰。只要在週日凌晨前集滿 8 個打卡點，即可獲得獨家「夜行神龍」數位徽章！',
     tag: '官方活動',
-    image: 'https://images.unsplash.com/photo-1563223552-3012bc0bca5c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'
+    image: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80'
   },
   {
     title: '5 月壽星看過來！推薦這 3 條慶生微醺路線',
     desc: '不知道生日去哪裡慶祝嗎？我們為你精選了大安區與中山區的質感雞尾酒吧路線，保證讓朋友滿意。',
     tag: '路線推薦',
-    image: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'
+    image: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80'
   },
   {
     title: '系統更新：已支援外部 Google Maps 無縫導航',
     desc: '針對玩家反饋，探索地圖與打卡畫面現已全面整合 Google Maps 外部導航功能，步行路線不再迷路。',
     tag: '系統公告',
-    image: 'https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80'
+    image: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80'
   }
 ]
 </script>

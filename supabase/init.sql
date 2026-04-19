@@ -216,6 +216,8 @@ CREATE POLICY "創建者可刪除路線"          ON public.routes FOR DELETE US
 ALTER TABLE public.visit_history ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "用戶可讀取自己的打卡記錄" ON public.visit_history FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "用戶可新增打卡記錄"        ON public.visit_history FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "用戶可編輯自己的打卡記錄"   ON public.visit_history FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "用戶可刪除自己的打卡記錄"   ON public.visit_history FOR DELETE USING (auth.uid() = user_id);
 
 -- route_likes
 ALTER TABLE public.route_likes ENABLE ROW LEVEL SECURITY;

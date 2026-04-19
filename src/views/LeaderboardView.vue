@@ -1,8 +1,11 @@
 <template>
-  <div class="min-h-dvh">
-    <header class="px-4 pt-14 pb-4">
-      <h1 class="font-display font-bold text-2xl text-neon-gradient">🏆 排行榜</h1>
-      <p class="text-text-muted text-sm mt-1">本週最強酒精路跑勇士</p>
+  <div class="min-h-dvh max-w-[1280px] mx-auto">
+    <header class="px-4 pt-14 pb-4 flex items-start justify-between">
+      <div>
+        <h1 class="font-display font-bold text-2xl text-neon-gradient">🏆 排行榜</h1>
+        <p class="text-text-muted text-sm mt-1">本週最強酒精路跑勇士</p>
+      </div>
+      <ProfileButton />
     </header>
 
     <!-- Tab 切換 -->
@@ -67,33 +70,40 @@
 
     <!-- 完整排行列表 -->
     <section class="px-4 space-y-2 pb-4">
-      <div
-        v-for="(user, idx) in leaderboard"
-        :key="user.id"
-        class="card p-3 flex items-center gap-3 animate-in"
-        :class="[`stagger-${Math.min(idx+1,5)}`, {'border-neon-purple/30': idx < 3}]"
-      >
-        <span class="w-7 text-center font-display font-bold"
-              :class="idx === 0 ? 'text-neon-amber' : idx === 1 ? 'text-text-secondary' : 'text-text-muted'">
-          {{ idx + 1 }}
-        </span>
-        <div class="w-9 h-9 rounded-full overflow-hidden bg-dark-700 border border-dark-600 shrink-0">
-          <img v-if="user.avatar_url" :src="user.avatar_url" class="w-full h-full object-cover" />
-          <div v-else class="w-full h-full flex items-center justify-center">🍺</div>
-        </div>
-        <div class="flex-1 min-w-0">
-          <p class="font-semibold text-sm truncate">{{ user.username }}</p>
-          <p class="text-xs text-text-muted">Lv.{{ user.level }} · {{ user.total_bars_visited }} 間</p>
-        </div>
-        <div class="text-right shrink-0">
-          <p class="font-display font-bold text-neon-purple">{{ statValue(user) }}</p>
-          <p class="text-2xs text-text-muted">{{ statUnit }}</p>
-        </div>
+      <div v-if="loading" class="py-16 flex flex-col items-center justify-center text-neon-purple">
+        <span class="material-symbols-outlined animate-spin mb-2" style="font-size: 32px">progress_activity</span>
+        <span class="text-sm font-medium">載入勇士名單中...</span>
       </div>
 
-      <div v-if="!leaderboard.length && !loading" class="text-center py-12 text-text-muted">
-        排行榜暫無資料
-      </div>
+      <template v-else>
+        <div
+          v-for="(user, idx) in leaderboard"
+          :key="user.id"
+          class="card p-3 flex items-center gap-3 animate-in"
+          :class="[`stagger-${Math.min(idx+1,5)}`, {'border-neon-purple/30': idx < 3}]"
+        >
+          <span class="w-7 text-center font-display font-bold"
+                :class="idx === 0 ? 'text-neon-amber' : idx === 1 ? 'text-text-secondary' : 'text-text-muted'">
+            {{ idx + 1 }}
+          </span>
+          <div class="w-9 h-9 rounded-full overflow-hidden bg-dark-700 border border-dark-600 shrink-0">
+            <img v-if="user.avatar_url" :src="user.avatar_url" class="w-full h-full object-cover" />
+            <div v-else class="w-full h-full flex items-center justify-center">🍺</div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-sm truncate">{{ user.username }}</p>
+            <p class="text-xs text-text-muted">Lv.{{ user.level }} · {{ user.total_bars_visited }} 間</p>
+          </div>
+          <div class="text-right shrink-0">
+            <p class="font-display font-bold text-neon-purple">{{ statValue(user) }}</p>
+            <p class="text-2xs text-text-muted">{{ statUnit }}</p>
+          </div>
+        </div>
+
+        <div v-if="!leaderboard.length" class="text-center py-12 text-text-muted">
+          排行榜暫無資料
+        </div>
+      </template>
     </section>
   </div>
 </template>
@@ -101,6 +111,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { supabase } from '@/lib/supabase'
+import ProfileButton from '@/components/layout/ProfileButton.vue'
 
 const activeTab = ref('bars')
 const leaderboard = ref([])

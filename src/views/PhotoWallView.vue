@@ -1,8 +1,11 @@
 <template>
-  <div class="min-h-dvh">
-    <header class="px-4 pt-14 pb-4">
-      <h1 class="font-display font-bold text-2xl text-neon-gradient">📸 微醺時刻</h1>
-      <p class="text-text-muted text-sm mt-1">本週最佳微醺快照，猜猜他在哪裡喝的？</p>
+  <div class="min-h-dvh max-w-[1280px] mx-auto">
+    <header class="px-4 pt-14 pb-4 flex items-start justify-between">
+      <div>
+        <h1 class="font-display font-bold text-2xl text-neon-gradient">📸 微醺時刻</h1>
+        <p class="text-text-muted text-sm mt-1">本週最佳微醺快照，猜猜他在哪裡喝的？</p>
+      </div>
+      <ProfileButton />
     </header>
 
     <!-- 週榜冠軍 Banner -->
@@ -24,22 +27,21 @@
       </div>
     </section>
 
-    <!-- 照片瀑布牆 -->
-    <section class="px-4 pb-4">
-      <div v-if="loading" class="columns-2 gap-3 space-y-3">
-        <div v-for="i in 6" :key="i" class="skeleton break-inside-avoid"
-             :style="{ height: `${Math.random()*80+120}px`, borderRadius:'1rem' }" />
+    <!-- 照片牆 (已限制最大寬度與高度) -->
+    <section class="px-4 pb-4 mx-auto">
+      <div v-if="loading" class="grid grid-cols-3 gap-4">
+        <div v-for="i in 3" :key="i" class="skeleton h-48 rounded-xl w-full" />
       </div>
 
-      <div v-else class="columns-2 gap-3">
+      <div v-else class="grid grid-cols-3 gap-4">
         <div
           v-for="(photo, idx) in photos"
           :key="photo.id"
-          class="break-inside-avoid mb-3 card overflow-hidden cursor-pointer
+          class="card overflow-hidden cursor-pointer
                  hover:border-neon-purple/40 transition-all duration-300 hover:-translate-y-0.5"
           @click="openPhoto(photo)"
         >
-          <img :src="photo.url" :alt="`微醺時刻 ${idx+1}`" class="w-full object-cover" loading="lazy" />
+          <img :src="photo.url" :alt="`微醺時刻 ${idx+1}`" class="w-full max-h-[250px] object-cover rounded-t-md" loading="lazy" />
           <div class="p-2.5">
             <!-- 猜地點 -->
             <div v-if="!photo.guessed" class="flex items-center gap-2 mb-2">
@@ -85,6 +87,7 @@ import { ref, onMounted } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
+import ProfileButton from '@/components/layout/ProfileButton.vue'
 
 const authStore = useAuthStore()
 const { success, info } = useToast()
@@ -124,7 +127,7 @@ async function load() {
 }
 
 function toggleCheers(photo) {
-  if (!authStore.isLoggedIn) { info('請先登入才能舉杯！'); return }
+  if (!authStore.isLoggedIn) { authStore.showLoginModal = true; return }
   photo.cheered = !photo.cheered
   photo.cheers += photo.cheered ? 1 : -1
   if (photo.cheered) success('已舉杯 🍺！')

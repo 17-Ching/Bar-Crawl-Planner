@@ -2,7 +2,7 @@
   <div class="relative w-full flex flex-col h-[calc(100vh-80px)]">
 
     <!-- ── 頂部搜尋列（z-[900] 高於 Leaflet 控制 z-800）── -->
-    <header class="absolute top-0 inset-x-0 z-[900] p-3 pointer-events-none">
+    <header class="absolute top-0 inset-x-0 z-[900] p-3 pointer-events-none max-w-[1280px] mx-auto">
       <div class="glass-card p-2.5 flex items-center gap-2 pointer-events-auto">
         <!-- App 標誌 -->
         <span class="font-display font-bold text-sm text-neon-gradient shrink-0">🍺</span>
@@ -66,19 +66,7 @@
         </button>
 
         <!-- 登入 -->
-        <button
-          id="map-login-btn"
-          @click="showLoginModal = true"
-          class="w-9 h-9 flex items-center justify-center rounded-xl border transition-colors shrink-0 overflow-hidden"
-          :class="authStore.isLoggedIn
-            ? 'border-neon-purple/50 bg-neon-purple/10'
-            : 'border-dark-600 text-text-muted hover:border-neon-purple bg-dark-800'"
-          :aria-label="authStore.isLoggedIn ? '個人資料' : '登入'"
-        >
-          <img v-if="authStore.profile?.avatar_url" :src="authStore.profile.avatar_url" class="w-full h-full object-cover" />
-          <Lock v-else-if="!authStore.isLoggedIn" :size="15" />
-          <UserCircle v-else :size="18" class="text-neon-purple" />
-        </button>
+        <ProfileButton />
       </div>
 
       <!-- ── 模式切換 Toggle ── -->
@@ -131,7 +119,7 @@
     </Transition>
 
     <!-- ── 右下浮動按鈕 ── -->
-    <div class="absolute bottom-28 right-4 z-[400] flex flex-col gap-2">
+    <div class="absolute bottom-[100px] left-1/2 -translate-x-1/2 z-[400] flex flex-col gap-2">
       <button
         id="map-refresh-btn"
         @click="loadPOIs"
@@ -145,8 +133,8 @@
 
     <!-- ── 底部統計列 ── -->
     <Transition name="fade-overlay">
-      <div v-if="barsStore.bars.length" class="absolute bottom-24 inset-x-3 z-[400]">
-        <div class="glass-card px-4 py-2 flex items-center justify-between">
+      <div v-if="barsStore.bars.length" class="absolute bottom-[60px] inset-x-3 z-[400] max-w-[1280px] mx-auto flex flex-col items-center">
+        <div class="glass-card px-4 py-2 flex items-center justify-between max-w-[500px] w-full">
           <div class="flex items-center gap-3 text-sm">
             <span class="text-text-muted text-xs">附近</span>
             <span class="text-neon-purple font-semibold">{{ barCount }} 間酒吧</span>
@@ -168,10 +156,6 @@
       />
     </Transition>
 
-    <!-- ── 登入 Modal ── -->
-    <Transition name="modal">
-      <LoginModal v-if="showLoginModal" @close="showLoginModal = false" />
-    </Transition>
   </div>
 </template>
 
@@ -189,13 +173,13 @@ import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import { MAP_CONFIG } from '@/config'
 import BarDetailDrawer from '@/components/map/BarDetailDrawer.vue'
-import LoginModal from '@/components/auth/LoginModal.vue'
+import ProfileButton from '@/components/layout/ProfileButton.vue'
 
 const barsStore  = useBarsStore()
 const routeStore = useRouteStore()
 const authStore  = useAuthStore()
 const router     = useRouter()
-const { success, error: toastError } = useToast()
+const { success, error: toastError, info } = useToast()
 
 // ── Demo 假資料 ───────────────────────────────────────────
 const DEMO_BARS = [
@@ -219,7 +203,6 @@ const isLocating      = ref(false)
 const isSearching     = ref(false)
 const selectedBar     = ref(null)
 const currentAreaName = ref('台北市')
-const showLoginModal  = ref(false)
 const mapMode         = ref('bar')   // 'bar' | 'convenience'
 const mapLoading      = ref(false)   // 載入動畫
 const loadingHint     = ref('正在載入地標…')
@@ -278,6 +261,9 @@ onMounted(async () => {
   map.whenReady(() => {
     loadPOIs()
   })
+
+  // 加入地圖拖曳結束後的防抖搜尋
+  map.on('moveend', debouncedLoadPOIs)
 })
 
 onUnmounted(() => map?.remove())
@@ -286,6 +272,14 @@ onUnmounted(() => map?.remove())
 function setMode(mode) {
   mapMode.value = mode
   renderMarkers()
+}
+
+let poiSearchTimeout = null
+function debouncedLoadPOIs() {
+  if (poiSearchTimeout) clearTimeout(poiSearchTimeout)
+  poiSearchTimeout = setTimeout(() => {
+    loadPOIs()
+  }, 800)
 }
 
 // ── 載入 POI ───────────────────────────────────────────────
@@ -299,17 +293,18 @@ async function loadPOIs() {
   const radiusM = zoom >= 15 ? 800 : zoom >= 13 ? 1500 : 3000
 
   try {
-    const [bars, pubs, stores] = await Promise.all([
-      barsStore.fetchFromOverpass({ lat: center.lat, lng: center.lng, radiusM, type: 'bar' }),
-      barsStore.fetchFromOverpass({ lat: center.lat, lng: center.lng, radiusM, type: 'pub' }),
-      barsStore.fetchFromOverpass({ lat: center.lat, lng: center.lng, radiusM, type: 'convenience' }),
-    ])
+    // 改成只發送 1 個請求，將酒吧、Pub、超商查詢合併，速度提升 3 倍
+    const all = await barsStore.fetchFromOverpass({ lat: center.lat, lng: center.lng, radiusM, type: 'all' })
 
-    const all = [...bars, ...pubs, ...stores]
     barsStore.bars = all.length > 0 ? all : DEMO_BARS
 
     if (all.length === 0) loadingHint.value = 'API 逾時，顯示示範資料'
-  } catch {
+  } catch (e) {
+    if (e.message === 'rate_limited') {
+      info('目前探索人數較多，API 暫時限流，請稍候幾秒再試 🍻')
+    } else {
+      toastError('載入地標失敗')
+    }
     // Fallback：即使 API 全部失敗也能顯示地標
     barsStore.bars = DEMO_BARS
     loadingHint.value = '載入失敗，顯示示範資料'
@@ -434,13 +429,12 @@ function flyToSuggestion(s) {
 // ── 事件處理 ───────────────────────────────────────────────
 function handleAddWaypoint(bar) {
   routeStore.addWaypoint(bar)
-  success(`已將「${bar.name}」加入路線！`)
+  success('已加入酒精路跑路線！')
   selectedBar.value = null
-  router.push('/route')
 }
 
 function handleCheckin(bar) {
-  if (!authStore.isLoggedIn) { showLoginModal.value = true; return }
+  if (!authStore.isLoggedIn) { authStore.showLoginModal = true; return }
   sessionStorage.setItem('checkin_bar', JSON.stringify(bar))
   router.push('/footprints')
 }

@@ -8,6 +8,7 @@ export const useRouteStore = defineStore('routes', () => {
   const routeGeometry = ref(null)  // OSRM 回傳的 GeoJSON LineString
   const routeStats = ref(null)     // { distanceKm, durationMin, barCount, convenienceCount }
   const savedRoutes = ref([])
+  const myRoutes = ref([])
   const loading = ref(false)
 
   const waypointCount = computed(() => waypoints.value.length)
@@ -75,7 +76,7 @@ export const useRouteStore = defineStore('routes', () => {
       creator_id: creatorId,
       name,
       description,
-      waypoints: waypoints.value.map(w => ({ bar_id: w.bar.id, order: w.order })),
+      waypoints: waypoints.value.map(w => ({ bar_id: w.bar.id, order: w.order, bar_name: w.bar.name, lat: w.bar.lat, lng: w.bar.lng, category: w.bar.category })),
       total_distance_km: parseFloat(routeStats.value.distanceKm),
       estimated_duration_min: routeStats.value.durationMin,
       bar_count: routeStats.value.barCount,
@@ -86,6 +87,17 @@ export const useRouteStore = defineStore('routes', () => {
 
     if (!error && data) savedRoutes.value.unshift(data)
     return { data, error }
+  }
+
+  // ── 載入自己建立的路線 ────────────────────────────────────
+  async function fetchMyRoutes(creatorId) {
+    if (!creatorId) return
+    const { data } = await supabase
+      .from('routes')
+      .select('*')
+      .eq('creator_id', creatorId)
+      .order('created_at', { ascending: false })
+    myRoutes.value = data || []
   }
 
   // ── 載入公開路線 ──────────────────────────────────────────
@@ -100,8 +112,8 @@ export const useRouteStore = defineStore('routes', () => {
   }
 
   return {
-    waypoints, routeGeometry, routeStats, savedRoutes, loading,
+    waypoints, routeGeometry, routeStats, savedRoutes, myRoutes, loading,
     waypointCount, canPlan,
-    addWaypoint, removeWaypoint, clearWaypoints, planRoute, saveRoute, fetchPublicRoutes,
+    addWaypoint, removeWaypoint, clearWaypoints, planRoute, saveRoute, fetchPublicRoutes, fetchMyRoutes,
   }
 })

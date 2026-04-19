@@ -175,7 +175,7 @@ async function handleSave() {
 async function handleLogout() {
   await auth.signOut()
   success('已登出')
-  router.push('/map')
+  router.push('/')
 }
 </script>
 

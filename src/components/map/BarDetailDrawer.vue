@@ -26,7 +26,15 @@
               </h2>
               <p class="text-text-muted text-xs mt-0.5 flex items-center gap-1">
                 <span class="material-symbols-outlined" style="font-size:14px">location_on</span>
-                <span class="truncate">{{ bar.tags?.['addr:full'] || bar.tags?.['addr:street'] || '地址未知' }}</span>
+                <a
+                  :href="`https://www.google.com/maps/search/?api=1&query=${bar.lat},${bar.lng}`"
+                  target="_blank"
+                  rel="noopener"
+                  class="truncate hover:underline hover:text-blue-400 transition-colors"
+                  title="在 Google Maps 中開啟"
+                >
+                  {{ bar.tags?.['addr:full'] || bar.tags?.['addr:street'] || '地址未知' }}
+                </a>
               </p>
             </div>
             <div class="shrink-0 flex items-center gap-2">
@@ -68,22 +76,21 @@
             <button
               id="bar-checkin-btn"
               @click="$emit('checkin', bar)"
-              class="btn btn-primary flex-1 !py-2.5 gap-2"
+              class="btn flex-1 !py-2.5 gap-2 bg-dark-700 text-white hover:bg-dark-600 transition-colors"
             >
               <span class="material-symbols-outlined" style="font-size:18px">where_to_vote</span>
               打卡
             </button>
 
-            <!-- Google Maps 導航（外部連結） -->
-            <a
-              :href="`https://www.google.com/maps/search/?api=1&query=${bar.lat},${bar.lng}`"
-              target="_blank"
-              rel="noopener"
-              class="btn btn-secondary flex-1 !py-2.5 gap-2 flex items-center justify-center text-sm font-semibold"
+            <!-- 加入路跑 -->
+            <button
+              id="bar-add-route-btn"
+              @click="$emit('add-waypoint', bar)"
+              class="btn btn-primary flex-[1.5] !py-2.5 gap-2 flex items-center justify-center text-sm font-semibold"
             >
-              <span class="material-symbols-outlined" style="font-size:18px">map</span>
-              在 Google Maps 開啟
-            </a>
+              <span class="text-lg leading-none">➕</span>
+              加入路跑
+            </button>
           </div>
         </div>
       </div>

@@ -21,6 +21,11 @@
 
     <!-- 全域 Toast 通知 -->
     <ToastContainer />
+
+    <!-- 全域登入 Modal -->
+    <Transition name="modal">
+      <LoginModal v-if="auth.showLoginModal" @close="auth.showLoginModal = false" />
+    </Transition>
   </div>
 </template>
 
@@ -29,6 +34,7 @@ import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import BottomNav from '@/components/layout/BottomNav.vue'
 import ToastContainer from '@/components/ui/ToastContainer.vue'
+import LoginModal from '@/components/auth/LoginModal.vue'
 
 const auth = useAuthStore()
 onMounted(() => auth.init())

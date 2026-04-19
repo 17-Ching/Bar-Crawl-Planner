@@ -27,17 +27,31 @@ export const useBarsStore = defineStore('bars', () => {
 
   // ── 以 Overpass API 從 OSM 查詢即時 POI ─────────────────────
   async function fetchFromOverpass({ lat, lng, radiusM = 1500, type = 'bar' }) {
-    const tagMap = {
-      bar: 'amenity=bar',
-      pub: 'amenity=pub',
-      convenience: 'shop=convenience',
+    let innerQuery = ''
+    if (type === 'all') {
+      innerQuery = `
+        node["amenity"~"bar|pub"](around:${radiusM},${lat},${lng});
+        way["amenity"~"bar|pub"](around:${radiusM},${lat},${lng});
+        node["shop"="convenience"](around:${radiusM},${lat},${lng});
+        way["shop"="convenience"](around:${radiusM},${lat},${lng});
+      `
+    } else {
+      const tagMap = {
+        bar: 'amenity=bar',
+        pub: 'amenity=pub',
+        convenience: 'shop=convenience',
+      }
+      const tag = tagMap[type] || 'amenity=bar'
+      innerQuery = `
+        node[${tag}](around:${radiusM},${lat},${lng});
+        way[${tag}](around:${radiusM},${lat},${lng});
+      `
     }
-    const tag = tagMap[type] || 'amenity=bar'
+    
     const query = `
       [out:json][timeout:25];
       (
-        node[${tag}](around:${radiusM},${lat},${lng});
-        way[${tag}](around:${radiusM},${lat},${lng});
+${innerQuery}
       );
       out body center;
     `
@@ -47,17 +61,29 @@ export const useBarsStore = defineStore('bars', () => {
         body: `data=${encodeURIComponent(query)}`,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       })
-      const json = await res.json()
-      return (json.elements || []).map(el => ({
-        id: `osm_${el.id}`,
-        name: el.tags?.name || (type === 'convenience' ? '超商' : '酒吧'),
-        lat: el.lat ?? el.center?.lat,
-        lng: el.lon ?? el.center?.lon,
-        category: type,
-        tags: el.tags || {},
-        source: 'osm',
-      })).filter(b => b.lat && b.lng)
-    } catch {
+      if (res.status === 429) throw new Error('rate_limited')
+      const text = await res.text()
+      if (text.includes('rate_limited') || text.includes('Too Many Requests')) throw new Error('rate_limited')
+      const json = JSON.parse(text)
+      return (json.elements || []).map(el => {
+        let cat = type
+        if (type === 'all') {
+          if (el.tags?.shop === 'convenience') cat = 'convenience'
+          else if (el.tags?.amenity === 'pub') cat = 'pub'
+          else cat = 'bar'
+        }
+        return {
+          id: `osm_${el.id}`,
+          name: el.tags?.name || (cat === 'convenience' ? '超商' : '酒吧'),
+          lat: el.lat ?? el.center?.lat,
+          lng: el.lon ?? el.center?.lon,
+          category: cat,
+          tags: el.tags || {},
+          source: 'osm',
+        }
+      }).filter(b => b.lat && b.lng)
+    } catch (e) {
+      if (e.message === 'rate_limited') throw e
       return []
     }
   }

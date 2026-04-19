@@ -1,9 +1,12 @@
 <template>
-  <div class="min-h-dvh flex flex-col">
+  <div class="min-h-dvh flex flex-col max-w-[1280px] mx-auto">
     <!-- ── 頁首 ── -->
-    <header class="px-4 pt-14 pb-3">
-      <h1 class="font-display font-bold text-2xl text-neon-gradient">🍺 酒精路跑規劃</h1>
-      <p class="text-text-muted text-sm mt-1">點選地圖地標或選擇推薦路線，一鍵規劃！</p>
+    <header class="px-4 pt-14 pb-3 flex items-start justify-between">
+      <div>
+        <h1 class="font-display font-bold text-2xl text-neon-gradient">🍺 酒精路跑規劃</h1>
+        <p class="text-text-muted text-sm mt-1">點選地圖地標或選擇推薦路線，一鍵規劃！</p>
+      </div>
+      <ProfileButton />
     </header>
 
     <!-- ── 地圖（可點選地標加入路線）── -->
@@ -12,12 +15,14 @@
 
     <div class="flex-1 px-4 mt-4 space-y-4 overflow-y-auto pb-6">
 
+      <!-- ── 路線 Tab 切換 ── -->
+      <div class="flex gap-1 p-1 bg-dark-800 rounded-xl border border-dark-600 mb-3">
+        <button @click="activeTab = 'preset'" class="flex-1 py-1.5 rounded-lg text-sm font-semibold transition-all" :class="activeTab === 'preset' ? 'bg-dark-600 text-white' : 'text-text-muted hover:text-white'">推薦路線</button>
+        <button @click="loadMyRoutes()" class="flex-1 py-1.5 rounded-lg text-sm font-semibold transition-all" :class="activeTab === 'my' ? 'bg-dark-600 text-white' : 'text-text-muted hover:text-white'">我的路線</button>
+      </div>
+
       <!-- ── 推薦路線區塊 ── -->
-      <section>
-        <h2 class="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3 flex items-center gap-2">
-          <span class="material-symbols-outlined" style="font-size:18px;color:#C084FC">local_bar</span>
-          精選路線
-        </h2>
+      <section v-if="activeTab === 'preset'">
         <div class="space-y-2">
           <div
             v-for="preset in PRESET_ROUTES"
@@ -46,8 +51,62 @@
         </div>
       </section>
 
+      <!-- ── 我的路線區塊 ── -->
+      <section v-else-if="activeTab === 'my'">
+        <div v-if="!authStore.isLoggedIn" class="card border-dashed border-dark-500 p-6 text-center text-text-muted text-sm">
+          請先登入以檢視你的路線
+        </div>
+        <div v-else-if="!routeStore.myRoutes.length" class="card border-dashed border-dark-500 p-6 text-center text-text-muted text-sm">
+          尚無已儲存的路線
+        </div>
+        <div v-else class="space-y-2">
+          <div
+            v-for="rt in routeStore.myRoutes"
+            :key="rt.id"
+            class="card overflow-hidden hover:border-cyan-500/40 transition-all cursor-pointer group"
+            :class="expandedRouteId === rt.id ? 'border-cyan-500/40' : ''"
+            @click="toggleRouteExpand(rt)"
+          >
+            <div class="p-3 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center text-xl font-bold bg-cyan-500/20 border border-cyan-500/50">
+                🗺️
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-sm truncate group-hover:text-cyan-400 transition-colors">{{ rt.name }}</p>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="badge-cyan text-2xs px-2 py-0.5">{{ rt.total_distance_km }} km</span>
+                  <span class="text-2xs text-text-muted">{{ rt.estimated_duration_min }} 分鐘</span>
+                  <span class="text-2xs text-text-muted">{{ new Date(rt.created_at).toLocaleDateString() }}</span>
+                </div>
+              </div>
+              <span class="material-symbols-outlined text-text-muted transition-transform"
+                    :class="expandedRouteId === rt.id ? 'rotate-180 text-cyan-400' : ''">
+                expand_more
+              </span>
+            </div>
+            
+            <!-- 展開的中繼點清單 -->
+            <div v-if="expandedRouteId === rt.id" class="px-4 pb-4 pt-1 border-t border-dark-600 bg-dark-800/30">
+              <p class="text-xs text-text-muted mb-2 font-medium mt-2">路線站點：</p>
+              <div class="flex flex-col gap-2 relative">
+                <div v-for="(wp, i) in rt.waypoints" :key="i" class="flex items-start gap-2 relative z-10">
+                  <div class="w-5 h-5 rounded-full bg-dark-700 border border-cyan-500/50 flex items-center justify-center text-[10px] font-bold text-cyan-400 mt-0.5 shrink-0">
+                    {{ wp.order }}
+                  </div>
+                  <p class="text-sm font-medium text-text-primary">{{ wp.bar_name || '酒吧' }}</p>
+                </div>
+                <div class="absolute left-2.5 top-3 bottom-4 w-px bg-cyan-500/20 z-0"></div>
+              </div>
+              <button @click.stop="plotSavedRoute(rt)" class="btn btn-primary btn-sm w-full mt-4 gap-2">
+                <span class="material-symbols-outlined text-sm">map</span> 在地圖上顯示
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ── 中繼點列表 ── -->
-      <section>
+      <section v-if="activeTab === 'preset'">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-sm font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-2">
             <span class="material-symbols-outlined" style="font-size:18px;color:#22D3EE">route</span>
@@ -100,7 +159,7 @@
 
       <!-- ── 路線統計 ── -->
       <Transition name="fade">
-        <section v-if="routeStore.routeStats" class="card p-4 border-neon-purple/20">
+        <section v-if="activeTab === 'preset' && routeStore.routeStats" class="card p-4 border-neon-purple/20">
           <h2 class="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3">路線統計</h2>
           <div class="grid grid-cols-2 gap-3">
             <StatCard icon="📏" label="總距離" :value="`${routeStore.routeStats.distanceKm} km`" color="purple" />
@@ -116,7 +175,7 @@
       </Transition>
 
       <!-- ── 操作按鈕 ── -->
-      <div class="space-y-2 pb-2">
+      <div v-if="activeTab === 'preset'" class="space-y-2 pb-2">
         <button
           id="plan-route-btn"
           @click="planRoute"
@@ -132,7 +191,7 @@
         <button
           v-if="routeStore.routeStats"
           id="save-route-btn"
-          @click="showSaveModal = true"
+          @click="trySaveRoute"
           class="btn btn-secondary w-full gap-2"
         >
           <span class="material-symbols-outlined" style="font-size:18px">save</span>
@@ -162,6 +221,7 @@ import { useToast } from '@/composables/useToast'
 import { MAP_CONFIG } from '@/config'
 import StatCard from '@/components/ui/StatCard.vue'
 import SaveRouteModal from '@/components/route/SaveRouteModal.vue'
+import ProfileButton from '@/components/layout/ProfileButton.vue'
 
 const routeStore = useRouteStore()
 const authStore  = useAuthStore()
@@ -170,6 +230,8 @@ const { success, error: toastError } = useToast()
 
 const mapEl        = ref(null)
 const showSaveModal = ref(false)
+const activeTab     = ref('preset')
+const expandedRouteId = ref(null)
 
 let map          = null
 let routeLayer   = null
@@ -338,7 +400,68 @@ async function loadPresetRoute(preset) {
   }
 }
 
+async function loadMyRoutes() {
+  activeTab.value = 'my'
+  if (authStore.isLoggedIn) {
+    await routeStore.fetchMyRoutes(authStore.user.id)
+  }
+}
+
+function toggleRouteExpand(rt) {
+  if (expandedRouteId.value === rt.id) {
+    expandedRouteId.value = null
+  } else {
+    expandedRouteId.value = rt.id
+  }
+}
+
+function plotSavedRoute(rt) {
+  // Clear map markers
+  poiGroup?.clearLayers()
+  markerGroup?.clearLayers()
+  routeLayer?.clearLayers()
+  
+  if (!rt.waypoints || !rt.waypoints.length) return
+  
+  // Re-build markers using saved detailed JS payload
+  rt.waypoints.forEach((wp) => {
+    if (wp.lat && wp.lng) {
+      const idx = wp.order - 1
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="
+          width:28px;height:28px;background:hsl(${idx*60+270},70%,55%);
+          border-radius:50%;border:2px solid #fff;
+          display:flex;align-items:center;justify-content:center;
+          font-size:12px;font-weight:700;color:#fff;
+          box-shadow:0 2px 8px rgba(0,0,0,0.4)">
+          ${wp.order}</div>`,
+        iconSize: [28,28], iconAnchor: [14,14],
+      })
+      L.marker([wp.lat, wp.lng], { icon }).addTo(markerGroup)
+    }
+  })
+
+  // Fit bounds
+  const validWps = rt.waypoints.filter(w => w.lat && w.lng)
+  if (validWps.length) {
+    const bounds = L.latLngBounds(validWps.map(w => [w.lat, w.lng]))
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 })
+  }
+  
+  success('已在上方地圖預覽路線 🥳')
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 // ── 手動規劃路線 ───────────────────────────────────────────
+function trySaveRoute() {
+  if (!authStore.isLoggedIn) {
+    authStore.showLoginModal = true
+  } else {
+    showSaveModal.value = true
+  }
+}
+
 async function planRoute() {
   if (!routeStore.canPlan) return
   await routeStore.planRoute()
@@ -348,8 +471,8 @@ async function planRoute() {
 
 async function handleSave(formData) {
   if (!authStore.isLoggedIn) {
-    toastError('請先登入才能儲存路線')
     showSaveModal.value = false
+    authStore.showLoginModal = true
     return
   }
   const { error } = await routeStore.saveRoute({

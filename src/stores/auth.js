@@ -10,6 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user    = ref(null)
   const profile = ref(null)
   const loading = ref(true)
+  const showLoginModal = ref(false)
 
   const isLoggedIn = computed(() => !!user.value)
 
@@ -82,9 +83,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (avatarFile) {
       const ext  = avatarFile.name.split('.').pop()
       const path = `avatars/${uid}.${ext}`
-      const { error: upErr } = await supabase.storage.from('photos').upload(path, avatarFile, { upsert: true })
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true })
       if (!upErr) {
-        const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
+        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
         avatarUrl = urlData.publicUrl
       }
     }
@@ -115,9 +116,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (avatarFile) {
       const ext  = avatarFile.name.split('.').pop()
       const path = `avatars/${user.value.id}.${ext}`
-      const { error: upErr } = await supabase.storage.from('photos').upload(path, avatarFile, { upsert: true })
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true })
       if (!upErr) {
-        const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
+        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
         avatarUrl = urlData.publicUrl
       }
     }
@@ -149,7 +150,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    user, profile, loading, isLoggedIn, currentLevel,
+    user, profile, loading, showLoginModal, isLoggedIn, currentLevel,
     init, signIn, signUp, signInWithGoogle, signOut, fetchProfile, updateProfile,
   }
 })

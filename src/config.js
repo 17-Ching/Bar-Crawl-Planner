@@ -25,8 +25,8 @@ export const MAP_CONFIG = {
   // OSRM 公共路線規劃 API（步行）
   osrmBase: 'https://router.project-osrm.org/route/v1/foot',
 
-  // Overpass API（OSM POI 查詢）
-  overpassUrl: 'https://overpass-api.de/api/interpreter',
+  // Overpass API（OSM POI 查詢）- 改用較寬鬆且針對亞洲優化的 Kumi Systems 節點
+  overpassUrl: 'https://overpass.kumi.systems/api/interpreter',
 
   // 打卡驗證容許範圍（公尺）
   checkinRadius: 200,

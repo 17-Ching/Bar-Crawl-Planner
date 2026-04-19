@@ -4,12 +4,12 @@
     z-[5000] 確保在地圖、Modal 等所有圖層之上
   -->
   <nav
-    class="fixed bottom-0 max-w-[1280px] left-1/2 -translate-x-1/2 w-full z-[5000] pb-safe"
+    class="fixed bottom-[30px] max-w-[1000px] left-1/2 -translate-x-1/2 w-full z-[5000]  overflow-hidden"
     role="navigation"
     aria-label="主選單"
   >
     <!-- 滿版背景 + 毛玻璃 -->
-    <div style="background: rgba(10,10,20,0.92); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.06)">
+    <div class="rounded-[200px]" style="background: rgba(10,10,20,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.06)">
       <!--
         內部按鈕容器：max-w-5xl 置中
         → 手機：按鈕跨滿寬

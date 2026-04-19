@@ -1,8 +1,9 @@
 <template>
-  <div
-    class="fixed inset-0 z-[700] bg-black/70 backdrop-blur-sm flex items-center justify-center p-5"
-    @click.self="$emit('close')"
-  >
+  <teleport to="body">
+    <div
+      class="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-5"
+      @click.self="$emit('close')"
+    >
     <div class="card w-full max-w-sm animate-in relative overflow-y-auto max-h-[90dvh]">
 
       <!-- 關閉 -->
@@ -224,7 +225,8 @@
         </template>
       </div>
     </div>
-  </div>
+    </div>
+  </teleport>
 </template>
 
 <script setup>

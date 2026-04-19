@@ -1,18 +1,21 @@
 <template>
-  <div class="min-h-dvh">
+  <div class="min-h-dvh max-w-[1280px] mx-auto">
     <!-- 頁首 -->
-    <header class="px-4 pt-14 pb-4 flex items-center justify-between">
+    <header class="px-4 pt-14 pb-4 flex items-start justify-between">
       <div>
         <h1 class="font-display font-bold text-2xl text-neon-gradient">🚩 我的足跡</h1>
         <p class="text-text-muted text-sm mt-1">{{ visits.length }} 個打卡記錄</p>
       </div>
-      <button
-        id="checkin-new-btn"
-        @click="showCheckinModal = true"
-        class="btn btn-primary btn-sm"
-      >
-        + 打卡
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          id="checkin-new-btn"
+          @click="showCheckinModal = true"
+          class="btn btn-primary btn-sm"
+        >
+          + 打卡
+        </button>
+        <ProfileButton />
+      </div>
     </header>
 
     <!-- 成就徽章列 -->
@@ -41,7 +44,7 @@
         <p class="text-5xl mb-4">🔐</p>
         <p class="font-display font-bold text-xl text-neon-gradient mb-2">登入以檢視足跡</p>
         <p class="text-text-muted text-sm mb-6">登入後可以記錄所有打卡足跡、照片與備註</p>
-        <button @click="showLoginModal = true" class="btn btn-primary">
+        <button @click="authStore.showLoginModal = true" class="btn btn-primary">
           🔐 登入 / 註冊
         </button>
       </div>
@@ -78,15 +81,18 @@
               <p class="text-xs text-text-muted">{{ formatDate(visit.checked_in_at) }}</p>
             </div>
             <div class="text-xl shrink-0">{{ visit.mood_emoji || '🍺' }}</div>
+            <button @click="editCheckin(visit)" class="text-text-muted hover:text-neon-cyan shrink-0 p-1 bg-dark-800 rounded z-10 transition-colors" title="編輯紀錄">
+              <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+            </button>
           </div>
 
           <!-- 照片格 -->
-          <div v-if="visit.photo_urls?.length" class="flex gap-1.5 mb-3">
+          <div v-if="visit.photo_urls?.length" class="flex gap-2 mb-3 overflow-x-auto pb-1 scrollbar-none">
             <img
               v-for="(url, pi) in visit.photo_urls.slice(0, 3)"
               :key="pi"
               :src="url"
-              class="h-20 flex-1 min-w-0 object-cover rounded-xl border border-dark-600"
+              class="w-[100px] h-[100px] object-cover rounded-lg flex-shrink-0 border border-dark-600"
               :alt="`打卡照片 ${pi+1}`"
               loading="lazy"
             />
@@ -108,29 +114,46 @@
 
     <!-- 打卡 Modal -->
     <Transition name="modal">
-      <CheckinModal v-if="showCheckinModal" :initial-bar="initialBar" @close="showCheckinModal = false" @saved="loadVisits" />
+      <CheckinModal v-if="showCheckinModal" :initial-bar="initialBar" :edit-visit="editingVisit" @close="closeModal" @saved="handleSaved" />
     </Transition>
 
-    <!-- 登入 Modal -->
-    <Transition name="modal">
-      <LoginModal v-if="showLoginModal" @close="showLoginModal = false" />
-    </Transition>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 import CheckinModal from '@/components/footprints/CheckinModal.vue'
-import LoginModal from '@/components/auth/LoginModal.vue'
+import ProfileButton from '@/components/layout/ProfileButton.vue'
 
 const authStore = useAuthStore()
 const visits = ref([])
 const loading = ref(false)
 const showCheckinModal = ref(false)
-const showLoginModal   = ref(false)
 const initialBar       = ref(null)  // 從地圖「打卡」跳過來時帶入的酒吧
+const editingVisit     = ref(null)  // 編輯打卡紀錄
+
+function editCheckin(visit) {
+  editingVisit.value = visit
+  showCheckinModal.value = true
+}
+
+function closeModal() {
+  showCheckinModal.value = false
+  editingVisit.value = null
+}
+
+function handleSaved(event) {
+  if (event?.isUpdate && event?.data) {
+    const idx = visits.value.findIndex(v => v.id === event.data.id)
+    if (idx !== -1) {
+      visits.value[idx] = event.data
+      return
+    }
+  }
+  loadVisits()
+}
 
 // 成就徽章定義
 const badges = ref([
@@ -182,6 +205,15 @@ onMounted(() => {
     } catch { /* ignore */ }
   }
   loadVisits()
+})
+
+watch(() => authStore.isLoggedIn, (loggedIn) => {
+  if (loggedIn) {
+    loadVisits()
+  } else {
+    visits.value = []
+    badges.value.forEach(b => b.unlocked = false)
+  }
 })
 
 </script>
